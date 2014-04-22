@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+@DEAD_L3=();
+
+@DEAD_L3=`neutron agent-list --quote nonnumeric -F alive -F id -F agent_type|grep L3|grep xxx|awk '{print \$2}'`;
+$GOOD_L3=`neutron agent-list --quote nonnumeric -F alive -F id -F agent_type|grep L3|grep -v xxx|awk '{print \$2}'|shuf|head -1`;
+chomp $GOOD_L3;
+foreach $l3 (@DEAD_L3) {
+  chomp $l3;
+  #print $l3 . "\n";
+  @ROUTERS=`neutron router-list-on-l3-agent -c name $l3 -f csv --quote minimal|grep -v ^name`;
+  foreach $router (@ROUTERS) {
+    chomp $router;
+    #print "neutron l3-agent-router-remove $l3 $router\n";
+    #print "neutron l3-agent-router-add $GOOD_L3 $router\n";
+    `neutron l3-agent-router-remove $l3 $router`;
+    `neutron l3-agent-router-add $GOOD_L3 $router`;
+  }
+}
