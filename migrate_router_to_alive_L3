@@ -13,7 +13,7 @@ foreach $l3 (@DEAD_L3) {
     chomp $router;
     #print "neutron l3-agent-router-remove $l3 $router\n";
     #print "neutron l3-agent-router-add $GOOD_L3 $router\n";
-    print "Migrating router [$outer] from dead L3 agent $l3 to an alive one...\n";
+    print "Migrating router [$router] from dead L3 agent $l3 to an alive one...\n";
     `neutron l3-agent-router-remove $l3 $router`;
     `neutron l3-agent-router-add $GOOD_L3 $router`;
   }
