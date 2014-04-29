@@ -1,21 +1,5 @@
 #! /usr/bin/env python
 
-# Copyright 2013 AT&T Services, Inc.
-# All Rights Reserved.
-#
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
-
-
 import logging
 import os
 import sys
@@ -27,59 +11,9 @@ from collections import OrderedDict
 from neutronclient.neutron import client
 
 
-LOG = logging.getLogger('neutron-ha-tool')
-LOG_FORMAT = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
-LOG_DATE = '%m-%d %H:%M'
-DESCRIPTION = "neutron High Availability Tool"
+
+DESCRIPTION = "Router migration tool across L3 agents"
 TAKEOVER_DELAY = int(random.random()*30+30)
-
-
-def parse_args():
-
-    # ensure environment has necessary items to authenticate
-    for key in ['OS_TENANT_NAME', 'OS_USERNAME', 'OS_PASSWORD',
-                'OS_AUTH_URL']:
-        if key not in os.environ.keys():
-            LOG.exception("Your environment is missing '%s'")
-
-    ap = argparse.ArgumentParser(description=DESCRIPTION)
-    ap.add_argument('-d', '--debug', action='store_true',
-                    default=False, help='Show debugging output')
-    ap.add_argument('-q', '--quiet', action='store_true', default=False,
-                    help='Only show error and warning messages')
-    ap.add_argument('-n', '--noop', action='store_true', default=False,
-                    help='Do not do any modifying operations (dry-run)')
-    ap.add_argument('--l3-agent-check', action='store_true', default=False,
-                    help='Show routers associated with offline l3 agents')
-    ap.add_argument('--l3-agent-migrate', action='store_true', default=False,
-                    help='Migrate routers away from offline l3 agents')
-    ap.add_argument('--l3-agent-rebalance', action='store_true', default=False,
-                    help='Rebalance router count on all l3 agents')
-    ap.add_argument('--replicate-dhcp', action='store_true', default=False,
-                    help='Replicate DHCP configuration to all agents')
-    ap.add_argument('--now', action='store_true', default=False,
-                    help='Migrate Routers immediately without a delay.')
-    ap.add_argument('--insecure', action='store_true', default=False,
-                    help='Explicitly allow neutron-ha-tool to perform '
-                         '"insecure" SSL (https) requests. The server\'s '
-                         'certificate will not be verified against any '
-                         'certificate authorities. This option should be used '
-                         'with caution.')
-    return ap.parse_args()
-
-
-def setup_logging(args):
-    level = logging.INFO
-    if args.quiet:
-        level = logging.WARN
-    if args.debug:
-        level = logging.DEBUG
-    logging.basicConfig(level=level, format=LOG_FORMAT, date_fmt=LOG_DATE)
-    handler = SysLogHandler(address='/dev/log')
-    syslog_formatter = logging.Formatter('%(name)s: %(levelname)s %(message)s')
-    handler.setFormatter(syslog_formatter)
-    LOG.addHandler(handler)
-
 
 def run(args):
     try:
