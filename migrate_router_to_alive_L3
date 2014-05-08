@@ -15,7 +15,7 @@ from neutronclient.neutron import client
 DESCRIPTION = "Router migration tool across L3 agents"
 TAKEOVER_DELAY = int(random.random()*30+30)
 
-def run(args):
+def run():
     try:
         ca = os.environ['OS_CACERT']
     except KeyError:
@@ -470,11 +470,12 @@ def agent_dead_id_list(agent_list, agent_type):
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    setup_logging(args)
+    #args = parse_args()
+    #setup_logging(args)
 
     try:
-        run(args)
+        #run(args)
+        run()
         sys.exit(0)
     except Exception as err:
         LOG.error(err)
