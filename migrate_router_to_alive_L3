@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+
+use List::Util qw(shuffle);
+
+###
+#
+# Get the number of bad L3 agents
+# If all L3s are OK, exit.
+#
+###
+#$NEUTRON_CMD = "neutron --os-username neutron --os-password NEUTRON_PASS --os-tenant-name services --os-auth-url http://cloud-areapd.pd.infn.it:35357/v2.0";
+$NEUTRON_CMD="neutron";
+
+$BAD_L3_AGENT_NUM=`$NEUTRON_CMD agent-list -D -f csv --quote minimal|grep L3|grep xxx|awk -F\",\" '{print \$1}'|wc -l`;
+
+chomp($BAD_L3_AGENT_NUM);
+
+$BAD_L3_AGENT_NUM =~ s/^\s+//g;
+$BAD_L3_AGENT_NUM =~ s/\s+$//g;
+
+if($BAD_L3_AGENT_NUM eq "0")
+{
+  print "All L3 agents are active. Bye...\n";
+  exit (0);
+}
+
+###
+#
+# Get the list of bad L3 agents
+#
+###
+@BAD_L3_AGENTS=`$NEUTRON_CMD agent-list -f csv --quote minimal|grep L3|grep xxx|awk -F\",\" '{print \$1","\$3}'`;
+
+###
+#
+# Build hash map bad L3 -> Host_where_agent_run
+#
+###
+foreach $l3 (@BAD_L3_AGENTS) {
+  @pieces = split(',', $l3);
+  chomp($pieces[1]);
+  chomp($pieces[0]);
+  $HOST_BAD_L3{$pieces[0]} = $pieces[1];
+}
+
+###
+#
+# Get the list of good L3 agents
+#
+###
+@GOOD_L3_AGENTS=`$NEUTRON_CMD agent-list -f csv --quote minimal|grep L3|grep \":-)\"|awk -F"," '{print \$1","\$3}'`;
+
+###
+#
+# Build hash map good L3 -> Host_where_agent_run
+#
+###
+foreach $l3 (@GOOD_L3_AGENTS) {
+  @pieces = split(',', $l3);
+  chomp($pieces[1]);
+  chomp($pieces[0]);
+  $HOST_GOOD_L3{$pieces[0]} = $pieces[1];
+}
+
+###
+#
+# Shuffles the array of good L3 agents
+#
+###
+@GOOD_L3_AGENTS = shuffle(keys %HOST_GOOD_L3);
+
+###
+# 
+# Migrate router from bad L3 to good ones
+#
+###
+$i=0;
+foreach $l3 (keys %HOST_BAD_L3) {
+  print "Getting routers hosted by L3 agent [$l3] on host [$HOST_BAD_L3{$l3}]\n";
+  @routers_to_migrate = `$NEUTRON_CMD router-list-on-l3-agent $l3 -f table --quote minimal|grep -v ^\$|grep -v "^+---"|tail -n+2|awk '{print \$2}'`;
+  if($#routers_to_migrate == -1) {
+    print "No router to migrate from host [$HOST_BAD_L3{$l3}]\n";
+    next;
+  }
+  foreach $router (@routers_to_migrate) {
+    chomp($router);
+    #print "\n\nROUTER=[$router]\n\n";
+    next if($router eq "id");
+    print "Migrating router [$router] to host [$HOST_GOOD_L3{$GOOD_L3_AGENTS[$i]},L3=$GOOD_L3_AGENTS[$i]]\n";
+    
+    `$NEUTRON_CMD l3-agent-router-remove $l3 $router`;
+    `$NEUTRON_CMD l3-agent-router-add $GOOD_L3_AGENTS[$i] $router`;
+    $i=$i+1;
+    if($i>$#GOOD_L3_AGENTS) {
+      $i=0;
+    }
+  }
+}
