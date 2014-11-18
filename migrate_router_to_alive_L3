@@ -2,16 +2,24 @@
 
 use List::Util qw(shuffle);
 
+$AGENT_HOST = $ARGV[0];
+
+$AGENT_HOST =~ s/^\s+|\s+$//g ;
+
+if($AGENT_HOST eq "") {
+  print "Missing hostname pattern\n";
+  exit(1);
+}
+
 ###
 #
 # Get the number of bad L3 agents
 # If all L3s are OK, exit.
 #
 ###
-#$NEUTRON_CMD = "neutron --os-username neutron --os-password NEUTRON_PASS --os-tenant-name services --os-auth-url http://cloud-areapd.pd.infn.it:35357/v2.0";
 $NEUTRON_CMD="neutron";
 
-$BAD_L3_AGENT_NUM=`$NEUTRON_CMD agent-list -D -f csv --quote minimal|grep L3|grep xxx|awk -F\",\" '{print \$1}'|wc -l`;
+$BAD_L3_AGENT_NUM=`$NEUTRON_CMD agent-list -D -f csv --quote minimal|grep L3|grep $AGENT_HOST|grep xxx|awk -F\",\" '{print \$1}'|wc -l`;
 
 chomp($BAD_L3_AGENT_NUM);
 
@@ -29,7 +37,7 @@ if($BAD_L3_AGENT_NUM eq "0")
 # Get the list of bad L3 agents
 #
 ###
-@BAD_L3_AGENTS=`$NEUTRON_CMD agent-list -f csv --quote minimal|grep L3|grep xxx|awk -F\",\" '{print \$1","\$3}'`;
+@BAD_L3_AGENTS=`$NEUTRON_CMD agent-list -f csv --quote minimal|grep L3|grep $AGENT_HOST|grep xxx|awk -F\",\" '{print \$1","\$3}'`;
 
 ###
 #
@@ -48,7 +56,7 @@ foreach $l3 (@BAD_L3_AGENTS) {
 # Get the list of good L3 agents
 #
 ###
-@GOOD_L3_AGENTS=`$NEUTRON_CMD agent-list -f csv --quote minimal|grep L3|grep \":-)\"|awk -F"," '{print \$1","\$3}'`;
+@GOOD_L3_AGENTS=`$NEUTRON_CMD agent-list -f csv --quote minimal|grep L3|grep $AGENT_HOST|grep \":-)\"|awk -F"," '{print \$1","\$3}'`;
 
 ###
 #
